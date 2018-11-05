@@ -31,7 +31,7 @@ function close_mysql_connection(){
 
 function getMinMaxLatLon(){
   global $mysqli;
-  $sql = "SELECT MIN( lat ) lat_min, MAX( lat ) lat_max, MIN( lon ) lon_min, MAX( lon ) lon_max FROM  `osm_nodes`";
+  $sql = "SELECT MIN( lat ) lat_min, MAX( lat ) lat_max, MIN( lon ) lon_min, MAX( lon ) lon_max FROM  `cities`";
   $retval = $mysqli->query($sql);
   if($retval && $row = $retval->fetch_assoc()){
     return array($row['lat_min'], $row['lat_max'], $row['lon_min'], $row['lon_max']);
@@ -60,12 +60,16 @@ function checkLonLat($from_lat, $from_lon, $to_lat, $to_lon){
 
 function getAllNeighboursForNodeId($node_id){
   global $mysqli;
-
-	$sql = 'select neighbour_id from city_connections where node_id = '.$node_id;
+  $buren=array();
+	$sql = "select neighbour_id from city_connections where node_id = ". $node_id."";
 	//echo 'SQL Query for nodes = '.$sql.'<br>';
-	$result = $mysqli->query($sql);
-	if ($result->num_rows > 0) {
-			return $result;
+	$query = $mysqli->query($sql);
+	if ($query->num_rows > 0) {
+    for($x=0;$x<$query->num_rows;$x++){
+      $row = $query->fetch_assoc();
+      array_push($buren,$row['neighbour_id']);
+    }
+			return $buren;
 	} else {
 	    echo "ERROR : 0 results at getAllNeighboursForNodeId".PHP_EOL;
 	}
@@ -93,30 +97,45 @@ function getNodeId($from_lat, $from_lon){
 
 function allemaal(){
   global $mysqli;
-	$sql = 'select distint node_id from city_connections';
-	$result = $mysqli->query($sql);
-	if ($result->num_rows > 0) {
-			return $result;
+  $knopen=array();
+	$sql = 'select id from cities';
+	$query = $mysqli->query($sql);
+	if ($query->num_rows > 0) {
+    for($x=0;$x<$query->num_rows;$x++){
+      $row = $query->fetch_assoc();
+      array_push($knopen,$row['id']);
+    }
+      
+      return $knopen;
+      
 	} else {
-	    echo "ERROR : 0 results at getAllNeighboursForNodeId".PHP_EOL;
+	    echo "ERROR : 0 results at Allemaal".PHP_EOL;
 	}
 		return NULL;
 }
 
-
+function weg($q,$buren){
+  for($x=0;$x<count($buren);$x++){
+    $zoek=array_search($buren[$x],$q);
+    if($zoek!==FALSE){
+      array_splice($buren,$zoek,1);
+    }  
+  }
+  return $buren;
+}
 
 
 function afstand($node1,$node2){
-  global$msqli;
-  $sql='select distance from city_connections where node_id='.$node1.' and neighbour_id=' .$node2.;
-  $result=$msqli->query($sql)
+  global$mysqli;
+  $sql="select distance from city_connections where node_id='.$node1.' and neighbour_id=' .$node2.'";
+  $result=$mysqli->query($sql);
   if($result->num_rows>0){
     $row= $result->fetch_assoc();
-    $distance=$row['distance']
-    return $distance
+    $distance=$row['distance'];
+    return $distance;
   }
   else {
-    echo "ERROR ".PHP_EOL;
+    echo "ERROR afstand ".PHP_EOL;
 }
   return NULL;
 }
@@ -125,36 +144,41 @@ function getShortestPathDijkstra($from_node, $to_node, $transport){
   $knopen=allemaal();
   $q=allemaal();
   $dist=array();
-  $prev= array();
-
-  foreach ($q as $knoop){
+  $prev= array();  
+  for($x=0;$x<count($q);$x++){
     array_push($dist,INF);
     array_push($prev,NULL);
+    echo "size Q={$q[$x]} \n";
   }
   $indexBron=array_search($from_node,$q);
   $dist[$indexBron]=0;
   $gevonden=FALSE;
-  while (count($q)>0 and $gevonden===FALSE){
+  $counter=0;
+  while (count($q)>0 and $gevonden===FALSE and $counter<100){
+    $var=count($q);
+    echo"count=$var \n";
     $min=min($dist);
-    $indexKleinste=array_search($min,$dist);
-    $huidigeNode=$knopen[$indexKleinste];
-    $indexInQ=array_search($huidigeNode,$q);
-    array_splice($q,$indexInQ,1);
+    $index=array_search($min,$dist);
+    $huidigeNode=$q[$index];
+    array_splice($q,$index,1);
+    array_splice($dist,$index,1);
     if($huidigeNode===$to_node){
       $gevonden=TRUE;
     }
     else{
+        echo "next_node = {$huidigeNode} \n".PHP_EOL;
         $buren=getAllNeighboursForNodeId($from_node);
-      
-      foreach($buren,$buur){
-        $alt=$min+afstand($huidigeNode,$buur);
-        $indexBuur=array_search($buur,$knopen);
-        if($alt<$dist[$indexBuur]){
-            $dist[$indexBuur]=$alt;
-            $prev[$indexBuur]=$huidigeNode;
-        }
+        $buren=weg($q,$buren);
+        for($x=0;$x<count($buren);$x++){
+          echo "buur = {$buren[$x]} \n".PHP_EOL;
+          $alt=$min+afstand($huidigeNode,$buren[$x]);
+          $indexBuur=array_search($buren[$x],$q);
+          if($alt<$dist[$indexBuur]){
+              $dist[$indexBuur]=$alt;
+              $prev[$indexBuur]=$huidigeNode;
+          }
       }
-    }
+    }$counter++;
   }
   $seq=array();
   $u=$to_node;
@@ -174,7 +198,7 @@ function getShortestPathDijkstra($from_node, $to_node, $transport){
 
   }
   $indexAfstand=array_search($to_node,$knopen);
-  return $seq,$dist[$indexAfstand]
+  return array($dist[$indexAfstand],$seq);
 }
 
 function json_dijkstra($from_lat, $from_lon, $to_lat, $to_lon, $transport){
