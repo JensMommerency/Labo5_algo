@@ -61,7 +61,7 @@ function checkLonLat($from_lat, $from_lon, $to_lat, $to_lon){
 function getAllNeighboursForNodeId($node_id){
   global $mysqli;
 
-	$sql = 'select * from osm_node_neighbours where node_id = '.$node_id;
+	$sql = 'select neighbour_id from city_connections where node_id = '.$node_id;
 	//echo 'SQL Query for nodes = '.$sql.'<br>';
 	$result = $mysqli->query($sql);
 	if ($result->num_rows > 0) {
@@ -75,7 +75,7 @@ function getAllNeighboursForNodeId($node_id){
 function getNodeId($from_lat, $from_lon){
   global $mysqli;
 
-	$sql = 'select id from osm_nodes where id in(select node_id from osm_way_nodes)
+	$sql = 'select id from cities 
 	order by ((' . $from_lat . '-lat)*(' . $from_lat . '-lat)+(' . $from_lon . '-lon)*(' . $from_lon . '-lon)) limit 1';
 	//echo 'SQL Query for nodes = '.$sql.'<br>';
 	$result = $mysqli->query($sql);
@@ -90,6 +90,22 @@ function getNodeId($from_lat, $from_lon){
 	}
 		return NULL;
 }
+
+function allemaal(){
+  global $mysqli;
+	$sql = 'select distint node_id from city_connections';
+	$result = $mysqli->query($sql);
+	if ($result->num_rows > 0) {
+			return $result;
+	} else {
+	    echo "ERROR : 0 results at getAllNeighboursForNodeId".PHP_EOL;
+	}
+		return NULL;
+}
+
+
+
+
 function afstand($node1,$node2){
   global$msqli;
   $sql='select distance from city_connections where node_id='.$node1.' and neighbour_id=' .$node2.;
@@ -106,15 +122,59 @@ function afstand($node1,$node2){
 }
 
 function getShortestPathDijkstra($from_node, $to_node, $transport){
-  // find the shortest path between the two given nodes, using osm_node_neighbours
-  $path = array($from_node);
-  // fill in the $path variable
-  // also return the $distance variable
-  //$path[] = $to_node;
-  $buren=getAllNeighboursForNodeId($from_node)
-  $indexen=
-  $distance = 3246.146;
-  return array($distance, $path);
+  $knopen=allemaal();
+  $q=allemaal();
+  $dist=array();
+  $prev= array();
+
+  foreach ($q as $knoop){
+    array_push($dist,INF);
+    array_push($prev,NULL);
+  }
+  $indexBron=array_search($from_node,$q);
+  $dist[$indexBron]=0;
+  $gevonden=FALSE;
+  while (count($q)>0 and $gevonden===FALSE){
+    $min=min($dist);
+    $indexKleinste=array_search($min,$dist);
+    $huidigeNode=$knopen[$indexKleinste];
+    $indexInQ=array_search($huidigeNode,$q);
+    array_splice($q,$indexInQ,1);
+    if($huidigeNode===$to_node){
+      $gevonden=TRUE;
+    }
+    else{
+        $buren=getAllNeighboursForNodeId($from_node);
+      
+      foreach($buren,$buur){
+        $alt=$min+afstand($huidigeNode,$buur);
+        $indexBuur=array_search($buur,$knopen);
+        if($alt<$dist[$indexBuur]){
+            $dist[$indexBuur]=$alt;
+            $prev[$indexBuur]=$huidigeNode;
+        }
+      }
+    }
+  }
+  $seq=array();
+  $u=$to_node;
+  if(array_search($u,$prev)!==FALSE or $u===$from_node){
+    $einde=FALSE;
+    while(array_search($u,$prev)!==FALSE and $einde===FALSE ){
+      $check=array_search($u,$prev);
+        if($prev[$check]===NULL){
+          $einde=TRUE;
+          array_push($seq,$u);
+        }
+        else{
+          array_push($seq,$u);
+          $u=$prev[$check];
+        }
+    }
+
+  }
+  $indexAfstand=array_search($to_node,$knopen);
+  return $seq,$dist[$indexAfstand]
 }
 
 function json_dijkstra($from_lat, $from_lon, $to_lat, $to_lon, $transport){
