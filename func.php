@@ -90,18 +90,29 @@ function getNodeId($from_lat, $from_lon){
 	}
 		return NULL;
 }
-#test
+function afstand($node1,$node2){
+  global$msqli;
+  $sql='select distance from city_connections where node_id='.$node1.' and neighbour_id=' .$node2.;
+  $result=$msqli->query($sql)
+  if($result->num_rows>0){
+    $row= $result->fetch_assoc();
+    $distance=$row['distance']
+    return $distance
+  }
+  else {
+    echo "ERROR ".PHP_EOL;
+}
+  return NULL;
+}
 
 function getShortestPathDijkstra($from_node, $to_node, $transport){
   // find the shortest path between the two given nodes, using osm_node_neighbours
   $path = array($from_node);
   // fill in the $path variable
   // also return the $distance variable
-  $path[] = 31813803;
-  $path[] = 31813811;
-  $path[] = 31813815;
-  $path[] = 31813827;
   //$path[] = $to_node;
+  $buren=getAllNeighboursForNodeId($from_node)
+  $indexen=
   $distance = 3246.146;
   return array($distance, $path);
 }
