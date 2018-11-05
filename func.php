@@ -3,7 +3,7 @@
 /*
 	author Maarten Slembrouck <maarten.slembrouck@gmail.com>
 */
-//test
+//gs,gbngbqns
 function initialize_mysql_connection(){
 	global $servername;
 	global $username;
