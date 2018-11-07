@@ -2,7 +2,7 @@
 header('Content-Type: application/json');
 
 require_once 'config.php';
-require_once 'func.php';
+require_once 'func2.php';
 
 $mysqli = initialize_mysql_connection();
 

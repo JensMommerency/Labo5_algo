@@ -1,6 +1,6 @@
 <?php
 require_once 'config.php';
-require_once 'func.php';
+require_once 'func2.php';
 
 $mysqli = initialize_mysql_connection();
 
@@ -29,7 +29,7 @@ $lons = array();
 function getLonLat($node_id){
   global $mysqli;
   $sql = "SELECT lat, lon
-          FROM `osm_nodes`
+          FROM `cities`
           WHERE `id` = '$node_id'";
   $retval = $mysqli->query($sql);
   $lonlat = $retval->fetch_assoc();
